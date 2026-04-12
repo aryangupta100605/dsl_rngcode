@@ -46,7 +46,8 @@ wire    [11:0]  adc_data;
 reg     [11:0]  r_adc_data;
 wire             adc_ready;
 wire            adc_valid;
-
+wire    [11:0]  seed_from_sampler;
+wire            seed_valid;
 
 
 assign  rstn = ~btn[1];
@@ -210,6 +211,14 @@ drv_mcp3202 adc_u0 (
     .adc_dout  (adc_dout),  // ADC DOUT -> FPGA
     .adc_clk   (adc_clk),
     .adc_cs    (adc_csn)
+);
+
+random_sampler #(.DATA_WIDTH(12), .COUNTER_WIDTH(17)) rng_sampler (
+    .clk(sysclk),
+    .rst_n(rstn),
+    .processed_signal(adc_data),   // or whatever signal they provide
+    .seed(seed_from_sampler),
+    .seed_valid(seed_valid)
 );
 
 endmodule
