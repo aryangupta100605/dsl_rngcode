@@ -11,16 +11,11 @@ module top_module(
     output adc_csn,
     output adc_clk,
     input adc_dout,
-//    output [11:0] ch0_out,       UNCOMMENT TO INSERT EXTRACT ADC_DATA
-//    output [11:0] ch1_out,
+    output [11:0] ch0_out,       
+    output [11:0] ch1_out,
     output reg led    
 );
 
-//ADC Data Trigger    @40KHz;
-//ADC SPI Clock       @1MHz;
-//UART Data Trigger   @40KHz;
-//UART Data Rate      @921600Hz;
-//7Segment Display    @1KHz;
 
 wire            clk_adc_tri,
                 clk_adc_spi,
@@ -45,18 +40,19 @@ wire             adc_mode;
 wire    [11:0]  adc_data;
 reg     [11:0]  r_adc_data0;
 reg     [11:0]  r_adc_data1;
-reg     [11:0]  latch_adc_data0;
-reg     [11:0]  latch_adc_data1;   
+reg     [11:0]  latch_transf_data; 
+reg     [11:0]  transf_data;   
 wire             adc_ready;
 wire            adc_valid;
 
-//
 
 assign  rstn = ~btn[1];
 assign adc_ready = rstn & clk_adc_tri;
+// Allows for toggling between 2 channels, single end
 assign adc_mode = {1'b0, adc_ch};
-//assign  ch0_out = r_adc_data0;   UNCOMMENT TO INSERT EXTRACT ADC_DATA
-//assign ch1_out = r_adc_data1;
+assign  ch0_out = r_adc_data0;
+assign ch1_out = r_adc_data1;
+assign transf_data = transformed_sig;
 
 
 always @(posedge clk_uart_tri or negedge rstn) begin
@@ -67,6 +63,7 @@ always @(posedge clk_uart_tri or negedge rstn) begin
     else led <= 1'b0;
 end
 
+// Toggles between channels, once SPI data received
 always @(posedge clk_adc_tri or negedge rstn) begin
     if (!rstn) begin
         adc_ch <= 1'b0;
@@ -75,6 +72,7 @@ always @(posedge clk_adc_tri or negedge rstn) begin
     end
 end
 
+// Purpose: Storing respective signal in Ch0 & Ch1
 always @(negedge rstn, posedge clk_adc_tri) begin
     if (!rstn)  begin
         r_adc_data0 <= 12'h000;
@@ -90,18 +88,17 @@ always @(negedge rstn, posedge clk_adc_tri) begin
     end
 end
 
+// Main purpose: Visualize signal via COM port
 always @(posedge clk_uart_tri or negedge rstn) begin
     if (!rstn) begin
         uart_cnter <= 4'd0;
-        uart_data  <= 8'hFF;
+        transf_data  <= 8'hFF;
         uart_ready <= 1'b0;
         led        <= 1'b0;
     end else begin
-//        uart_ready <= 1'b0;  // default low
         case (uart_cnter)
             4'd0: begin
-                latch_adc_data0 <= r_adc_data0;
-                latch_adc_data1 <= r_adc_data1;
+                latch_transf_data <= transf_data;
                 uart_ready <= 1'b1;
                 uart_cnter <= uart_cnter + 1'b1;
             end
@@ -123,7 +120,7 @@ always @(posedge clk_uart_tri or negedge rstn) begin
             end
             
             4'd4: begin
-                uart_data  <= {4'h00, latch_adc_data0[11:8]};
+                uart_data  <= {4'h00, latch_transf_data[11:8]};
                 uart_ready <= 1'b1;
                 uart_cnter <= uart_cnter + 1'b1;
             end
@@ -134,39 +131,17 @@ always @(posedge clk_uart_tri or negedge rstn) begin
             end
             
             4'd6: begin
-                uart_data  <= {latch_adc_data0[7:0]};
+                uart_data  <= {latch_transf_data[7:0]};
                 uart_ready <= 1'b1;
                 uart_cnter <= uart_cnter + 1'b1;
             end
             
-           4'd7: begin
+            4'd7: begin
                 uart_ready <= 1'b0;
                 uart_cnter <= uart_cnter + 1'b1;
            end  
-           
+            
             4'd8: begin
-                uart_data  <= {4'h00, latch_adc_data1[11:8]};
-                uart_ready <= 1'b1;
-                uart_cnter <= uart_cnter + 1'b1;
-            end
-            
-            4'd9: begin
-                uart_ready <= 1'b0;
-                uart_cnter <= uart_cnter + 1'b1;
-           end  
-            
-            4'd10: begin
-                uart_data  <= {latch_adc_data1[7:0]};
-                uart_ready <= 1'b1;
-                uart_cnter <= uart_cnter + 1'b1;
-            end
-            
-            4'd11: begin
-                uart_ready <= 1'b0;
-                uart_cnter <= uart_cnter + 1'b1;
-           end  
-            
-            4'd12: begin
                 uart_data  <= 8'hFF;
                 uart_ready <= 1'b1;
                 uart_cnter <= 4'd00;
@@ -266,10 +241,11 @@ drv_mcp3202 adc_u0 (
     .adc_cs    (adc_csn)
 );
 
-//module add_your_module(   UNCOMMENT TO EXTRACT ADC DATA
-//    .ch0_out  (adc_ch0), 
-//    .ch1_out  (adc_ch1)
-//);
+module add_your_module(      // Change module name
+    .ch0_out  (adc_ch0),     // DO NOT CHANGE, Ch0 signal input for your module
+    .ch1_out  (adc_ch1),     // DO NOT CHANGE, Ch1 signal input for your module
+    .transformed_sig (t_signal)  // DO NOT CHANGE, UART configured to read output signal
+);
 
 endmodule
 
