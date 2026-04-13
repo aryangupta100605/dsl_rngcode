@@ -49,8 +49,9 @@ reg     [11:0]  latch_adc_data0;
 reg     [11:0]  latch_adc_data1;   
 wire             adc_ready;
 wire            adc_valid;
+wire    [11:0]  seed_from_sampler;
+wire            seed_valid;
 
-//
 
 assign  rstn = ~btn[1];
 assign adc_ready = rstn & clk_adc_tri;
@@ -266,10 +267,13 @@ drv_mcp3202 adc_u0 (
     .adc_cs    (adc_csn)
 );
 
-//module add_your_module(   UNCOMMENT TO EXTRACT ADC DATA
-//    .ch0_out  (adc_ch0), 
-//    .ch1_out  (adc_ch1)
-//);
+random_sampler #(.DATA_WIDTH(12), .COUNTER_WIDTH(17)) rng_sampler (
+    .clk(sysclk),
+    .rst_n(rstn),
+    .processed_signal(adc_data),   // or whatever signal they provide
+    .seed(seed_from_sampler),
+    .seed_valid(seed_valid)
+);
 
 endmodule
 
