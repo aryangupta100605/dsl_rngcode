@@ -275,6 +275,8 @@ random_sampler #(.DATA_WIDTH(12), .COUNTER_WIDTH(17)) rng_sampler (
     .seed_valid(seed_valid)
 );
 
+    // Xorshift PRNG: Generates final random numbers using the physical ADC seed
+xorshift_prng my_prng (
     .clk(sysclk),                     
     .rstn(rstn),                      
     .seed_valid(seed_valid),          
