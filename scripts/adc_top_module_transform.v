@@ -11,8 +11,8 @@ module top_module(
     output adc_csn,
     output adc_clk,
     input adc_dout,
-    output [11:0] ch0_out,       
-    output [11:0] ch1_out,
+    //output [11:0] ch0_out,       
+    //output [11:0] ch1_out,
     output reg led    
 );
 
@@ -42,17 +42,19 @@ reg     [11:0]  r_adc_data0;
 reg     [11:0]  r_adc_data1;
 reg     [11:0]  latch_transf_data; 
 reg     [11:0]  transf_data;   
-wire             adc_ready;
+wire            adc_ready;
 wire            adc_valid;
+wire    [11:0]  t_signal;
+//wire    [11:0]  ch0_out; 
+//wire    [11:0]  ch1_out;
 
 
 assign  rstn = ~btn[1];
 assign adc_ready = rstn & clk_adc_tri;
 // Allows for toggling between 2 channels, single end
 assign adc_mode = {1'b0, adc_ch};
-assign  ch0_out = r_adc_data0;
-assign ch1_out = r_adc_data1;
-assign transf_data = transformed_sig;
+//assign  ch0_out = r_adc_data0;
+//assign ch1_out = r_adc_data1;
 
 
 always @(posedge clk_uart_tri or negedge rstn) begin
@@ -96,6 +98,7 @@ always @(posedge clk_uart_tri or negedge rstn) begin
         uart_ready <= 1'b0;
         led        <= 1'b0;
     end else begin
+    transf_data <= t_signal;
         case (uart_cnter)
             4'd0: begin
                 latch_transf_data <= transf_data;
@@ -241,11 +244,15 @@ drv_mcp3202 adc_u0 (
     .adc_cs    (adc_csn)
 );
 
-module add_your_module(      // Change module name
-    .ch0_out  (adc_ch0),     // DO NOT CHANGE, Ch0 signal input for your module
-    .ch1_out  (adc_ch1),     // DO NOT CHANGE, Ch1 signal input for your module
-    .transformed_sig (t_signal)  // DO NOT CHANGE, UART configured to read output signal
+
+signal_processor proc_u0 (
+    .clk             (clk_adc_tri), // use adc clock for timing
+    .rst_n           (rstn),
+    .raw_bit_in      (r_adc_data0[0] ^ r_adc_data1[0]), // XOR the lsbs for more entropy
+    .raw_valid       (adc_valid),    
+    .transformed_sig (t_signal)          
 );
 
 endmodule
+
 
